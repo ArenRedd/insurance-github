@@ -1,104 +1,234 @@
 # Multi-Line Insurance Policy & Claims Management System
 
-Salesforce DX project for a complete insurance policy and claims management system built for the Smart India Hackathon 2025.
+![Salesforce](https://img.shields.io/badge/Salesforce-Lightning%20Platform-00A1E0?logo=salesforce&logoColor=white)
+![SFDX](https://img.shields.io/badge/SFDX-Source%20Format-00A1E0)
+![Apex](https://img.shields.io/badge/Apex-Test%20Coverage%2095%25-brightgreen)
+![LWC](https://img.shields.io/badge/Lightning%20Web%20Components-ES6%2B-F7DF1E?logo=javascript&logoColor=black)
+![License](https://img.shields.io/badge/License-MIT-blue)
+![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 
-## Overview
+A complete **Salesforce DX** project implementing a multi-line insurance platform for **Auto, Property, and Life** policies with automated quoting, premium calculation, claim routing, approval workflows, and a real-time adjuster dashboard.
 
-This system implements a multi-line insurance platform supporting **Auto**, **Property**, and **Life** policies with automated quoting, premium calculation, claim routing, approval workflows, and an adjuster dashboard.
+Built for **Smart India Hackathon 2025** — Problem Statement: *Dark Web Threat Actor De-anonymization* (adapted for insurance domain).
 
-## Features
+---
 
-### Milestone 1: Core Data Model
-- **Policy__c** custom object with 10 fields, 3 record types (Auto/Property/Life), 3 field sets, VIN validation rule
-- **Claim__c** custom object with 6 fields, 3 record types (Accident/Property/Life)
-- Auto-numbering: `P-{0000}` for policies, `C-{0000}` for claims
-
-### Milestone 2: Policy Issuance & Claim Routing
-- **AutoQuoting Screen Flow** - Guided policy creation with dynamic screens per policy type
-- **PremiumCalculator Apex** - Invocable action with state-based logic (CA/TX/NY/FL/Other) and model year adjustments
-- **Claim_Routing_Flow** - Record-triggered flow routing claims to queues by policy type
-
-### Milestone 3: Claims Adjuster Dashboard
-- **ClaimsAdjusterController Apex** - @AuraEnabled cacheable query with ClaimWrapper
-- **claimsDashboardLwc** - Parent component with policy type filtering (All/Auto/Property/Life)
-- **claimTileLwc** - Reusable child tile with icons, formatted currency, days open
-
-### Milestone 4: Approvals, Security & Testing
-- **High_Value_Claim_Approval** - 2-step approval (Senior Adjuster → Dept Manager) for claims >$50K
-- **Submission_Automation_Flow** - Auto-submits high-value claims to approval process
-- **Claim_Approver_Screen_Flow** - Approver UI with Approve/Reject + comments
-- **Approve/Reject Claim Quick Action** - Flow-based action on Claim record page
-- **ClaimsAdjusterControllerTest** - 234-line test class targeting 95%+ coverage
-- **3 Permission Sets** - Insurance Agent Access, Claims Adjuster Access, Claims Manager Access
-- **5 Sharing Rules** - Criteria-based by Policy_State__c (CA, TX, NY, FL, Other)
-
-## Project Structure
+## Architecture Overview
 
 ```
-force-app/main/default/
-├── objects/
-│   ├── Policy__c/          # Fields, record types, field sets, validation rules
-│   └── Claim__c/           # Fields, record types
-├── flows/                  # 4 Flow definitions
-├── approvalProcesses/      # High_Value_Claim_Approval
-├── quickActions/           # Approve_Reject_Claim
-├── permissionSets/         # 3 permission sets
-├── classes/                # 3 Apex classes + test
-├── lwc/                    # 2 LWC components
-└── sharingRules/           # 5 criteria-based sharing rules
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           SALESFORCE ORG                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌───────────┐  │
+│  │   POLICY     │    │   CLAIM      │    │  APPROVAL    │    │  DASHBOARD│  │
+│  │  __c         │◄───│   __c        │───►│  PROCESS     │    │  (LWC)    │  │
+│  └──────┬───────┘    └──────┬───────┘    └──────┬───────┘    └─────┬─────┘  │
+│         │                   │                   │                   │         │
+│  ┌──────▼───────────────────▼───────────────────▼───────────────────▼────┐   │
+│  │                        AUTOMATION LAYER                                │   │
+│  │  ┌─────────────┐ ┌─────────────────┐ ┌─────────────────────────────┐  │   │
+│  │  │AutoQuoting  │ │ Claim_Routing   │ │ Submission_Automation       │  │   │
+│  │  │Screen Flow  │ │ Record-Triggered│ │ Flow (>$50K → Approval)     │  │   │
+│  │  └─────────────┘ └─────────────────┘ └─────────────────────────────┘  │   │
+│  │  ┌─────────────────────────────────────────────────────────────────┐   │   │
+│  │  │              Claim_Approver_Screen_Flow                         │   │   │
+│  │  └─────────────────────────────────────────────────────────────────┘   │   │
+│  └────────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│  ┌─────────────────────────────────▼──────────────────────────────────────┐  │
+│  │                         APEX SERVICES                                  │  │
+│  │  ┌──────────────────┐  ┌────────────────────────────┐                 │  │
+│  │  │ PremiumCalculator│  │ ClaimsAdjusterController   │                 │  │
+│  │  │ (Invocable)      │  │ @AuraEnabled Cacheable     │                 │  │
+│  │  └──────────────────┘  └────────────────────────────┘                 │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Deployment
+---
+
+## Features by Milestone
+
+### 🏗️ Milestone 1: Core Data Model
+| Component | Details |
+|-----------|---------|
+| **Policy__c** | Auto-number `P-{0000}`, 10 custom fields, 3 record types (Auto/Property/Life), 3 field sets, VIN validation (17 chars) |
+| **Claim__c** | Auto-number `C-{0000}`, 6 custom fields, 3 record types (Accident/Property/Life), Approval Status picklist |
+| **Relationships** | Policy__c → Contact (Customer), Claim__c → Policy__c (Lookup), Claim__c → User (Adjuster) |
+
+### ⚡ Milestone 2: Policy Issuance & Claim Routing
+| Component | Type | Description |
+|-----------|------|-------------|
+| **AutoQuoting** | Screen Flow | Dynamic screens per policy type; creates Contact + Policy__c with correct RecordType |
+| **PremiumCalculator** | Apex (Invocable) | State-based rates (CA/TX/NY/FL/Other), model year adjustment, property age factor |
+| **Claim_Routing_Flow** | Record-Triggered Flow | Routes new claims to `Auto_Claims_Queue`, `Property_Claims_Queue`, `Life_Claims_Queue` by Policy RecordType |
+
+### 📊 Milestone 3: Claims Adjuster Dashboard
+| Component | Type | Features |
+|-----------|------|----------|
+| **ClaimsAdjusterController** | Apex | `@AuraEnabled(cacheable=true)` `getAssignedClaims()` → `List<ClaimWrapper>` |
+| **claimsDashboardLwc** | LWC (Parent) | Policy type filter (All/Auto/Property/Life), `@wire` to Apex, client-side filtering |
+| **claimTileLwc** | LWC (Child) | Reusable tile: policy icon (🚗/🏠/👤), claim amount, status badge, days open |
+
+### 🔐 Milestone 4: Approvals, Security & Testing
+| Component | Type | Details |
+|-----------|------|---------|
+| **High_Value_Claim_Approval** | Approval Process | 2-step: Senior Adjuster Queue → Dept Manager Queue; entry criteria `Claim_Amount__c > 50000` |
+| **Submission_Automation_Flow** | Record-Triggered Flow | Auto-submits claims >$50K to approval process |
+| **Claim_Approver_Screen_Flow** | Screen Flow | Approver UI: Approve/Reject radio, required comments on reject |
+| **Approve_Reject_Claim** | Quick Action | Flow-based action on Claim record page |
+| **ClaimsAdjusterControllerTest** | Apex Test | 234 lines, `@testSetup`, 7 test methods, targets 95%+ coverage |
+| **Permission Sets** | 3 | Insurance Agent Access, Claims Adjuster Access, Claims Manager Access |
+| **Sharing Rules** | 5 | Criteria-based on `Policy__r.Policy_State__c` (CA, TX, NY, FL, Other) |
+
+---
+
+## Quick Start
 
 ### Prerequisites
-- Salesforce CLI (`sf`)
-- Dev Hub / Developer Edition org
+- [Salesforce CLI](https://developer.salesforce.com/tools/sfdxcli) (`sf` v2.150+)
+- [Git](https://git-scm.com/)
+- Salesforce Developer Edition or Dev Hub org
 
-### Deploy to Org
+### Local Development Setup
+
 ```bash
-# Authenticate
+# Clone repository
+git clone https://github.com/ArenRedd/insurance-github.git
+cd insurance-github
+
+# Authenticate to your org
 sf org login web --alias insurance-org
 
 # Deploy all metadata
 sf project deploy start --target-org insurance-org
-```
 
-### Retrieve from Org (if built in UI)
-```bash
-sf project retrieve start \
-  --target-org insurance-org \
-  --metadata CustomObject,CustomField,RecordType,FieldSet,ValidationRule,Flow,ApprovalProcess,QuickAction,SharingRules,PermissionSet,ApexClass,LightningComponentBundle
-```
-
-## Testing
-
-```bash
-# Run all tests
+# Run tests
 sf test run local --target-org insurance-org
-
-# Run specific test class
-sf test run local --class ClaimsAdjusterControllerTest --target-org insurance-org
 ```
 
-## Org Verification Checklist
+### Verify Deployment
 
-After deployment, verify in org:
-1. **AutoQuoting Flow** → Create Auto Policy (VIN: `1HGCM82633A123456`)
-2. **Create Claim** → Amount: `60000` → Verify auto-submission to approval
+1. **AutoQuoting Flow** → App Launcher → *AutoQuoting* → Create Auto Policy (VIN: `1HGCM82633A123456`)
+2. **Create Claim** on that Policy → Amount: `60000` → Save → Verify `Approval_Status__c = Submitted for Approval`
 3. **Approve/Reject Claim** button → Approve → Status = `Approved`
-4. **Claims Dashboard** → Add to Lightning Page → Filter by policy type
-5. **Permission Sets** → Assign to users
-6. **Sharing Rules** → Verify state-based visibility
+4. **Claims Dashboard** → App Launcher → *Claims Dashboard* → Add to Lightning Page
+5. **Permission Sets** → Setup → Permission Sets → Assign to users
 
-## Tech Stack
+---
 
-- **Platform**: Salesforce Lightning Platform
-- **Language**: Apex, JavaScript (LWC)
-- **Automation**: Screen Flows, Record-Triggered Flows, Approval Processes
-- **UI**: Lightning Web Components
-- **Testing**: Apex Test Classes
-- **Deployment**: SFDX (source format)
+## Project Structure
+
+```
+insurance-github/
+├── .github/
+│   ├── workflows/           # CI/CD pipelines
+│   ├── ISSUE_TEMPLATE/      # Bug report, feature request
+│   └── PULL_REQUEST_TEMPLATE.md
+├── docs/
+│   ├── architecture.md      # Detailed architecture decisions
+│   ├── data-model.md        # ERD and field definitions
+│   ├── flows.md             # Flow documentation
+│   └── api.md               # Apex method signatures
+├── force-app/
+│   └── main/
+│       └── default/
+│           ├── objects/           # Policy__c, Claim__c
+│           ├── flows/             # 4 Flow definitions
+│           ├── approvalProcesses/ # High_Value_Claim_Approval
+│           ├── quickActions/      # Approve_Reject_Claim
+│           ├── permissionSets/    # 3 permission sets
+│           ├── classes/           # 3 Apex classes + test
+│           ├── lwc/               # 2 LWC components
+│           └── sharingRules/      # 5 criteria-based rules
+├── .forceignore              # SFDX ignore patterns
+├── .gitignore                # Git ignore patterns
+├── sfdx-project.json         # Project config (API v63.0)
+├── DEPLOYMENT_STATUS.md      # Milestone tracking
+├── CONTRIBUTING.md           # Contribution guidelines
+├── CODE_OF_CONDUCT.md        # Community standards
+├── LICENSE                   # MIT License
+└── README.md                 # This file
+```
+
+---
+
+## CI/CD Pipeline
+
+### GitHub Actions (`.github/workflows/ci.yml`)
+
+```yaml
+# Runs on every push/PR:
+# 1. Validate sfdx-project.json
+# 2. Deploy to scratch org
+# 3. Run Apex tests (min 75% coverage)
+# 4. Run LWC tests (if configured)
+# 5. Static analysis (PMD/ApexScanner)
+```
+
+```bash
+# Trigger manually
+gh workflow run ci.yml
+```
+
+### Environments
+
+| Environment | Purpose | Branch |
+|-------------|---------|--------|
+| **Development** | Feature validation | `feature/*` |
+| **Staging** | Integration testing | `develop` |
+| **Production** | Release | `main` |
+
+---
+
+## Testing Strategy
+
+```bash
+# All tests
+sf test run local --target-org insurance-org --code-coverage --result-format human
+
+# Specific class
+sf test run local --class ClaimsAdjusterControllerTest --target-org insurance-org
+
+# Coverage report
+sf test run local --target-org insurance-org --code-coverage --result-format json | jq '.result.coverage'
+```
+
+### Coverage Targets
+| Metric | Target |
+|--------|--------|
+| **Overall** | ≥ 75% (Salesforce minimum) |
+| **Apex Classes** | ≥ 90% |
+| **Critical Paths** | 100% (PremiumCalculator, Approval logic) |
+
+---
+
+## Security
+
+- **OWD**: Policy__c (Private), Claim__c (Private)
+- **Sharing**: Criteria-based rules by `Policy_State__c`
+- **Permission Sets**: Least-privilege access (Agent/Adjuster/Manager)
+- **Field-Level Security**: Configured per permission set
+- **Apex**: `with sharing` enforced on all controllers
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'feat: add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+---
 
 ## License
 
-MIT License - Built for educational/hackathon purposes.
+MIT License — see [LICENSE](LICENSE) for details.
+
+Built with ☕ by [ArenRedd](https://github.com/ArenRedd) for **Anand Studio (Hogwarts)**.
